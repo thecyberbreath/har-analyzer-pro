@@ -36,7 +36,7 @@ const TABS: { id: Tab; label: string; icon: string; description: string }[] = [
 export function Dashboard({ analysis, onReset }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('summary');
   const [selectedEntry, setSelectedEntry] = useState<ParsedEntry | null>(null);
-  const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
+  const mode = 'advanced';
 
   const { entries, domains, flowStages, bottlenecks, recommendations, criticalPath, summary, story, beginnerSummary } = analysis;
   const criticalCount = bottlenecks.filter((b) => b.severity === 'critical').length;
@@ -61,36 +61,12 @@ export function Dashboard({ analysis, onReset }: DashboardProps) {
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Mode toggle */}
-              <div className="flex items-center bg-gray-100/80 rounded-lg p-0.5">
-                <button
-                  onClick={() => setMode('simple')}
-                  className={cn(
-                    'px-3 py-1.5 text-[12px] font-medium rounded-md transition-all',
-                    mode === 'simple' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  Simple
-                </button>
-                <button
-                  onClick={() => setMode('advanced')}
-                  className={cn(
-                    'px-3 py-1.5 text-[12px] font-medium rounded-md transition-all',
-                    mode === 'advanced' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  Advanced
-                </button>
-              </div>
-
-              <button
-                onClick={onReset}
-                className="text-[12px] text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-              >
-                New Analysis
-              </button>
-            </div>
+            <button
+              onClick={onReset}
+              className="text-[12px] text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              New Analysis
+            </button>
           </div>
         </div>
       </header>
