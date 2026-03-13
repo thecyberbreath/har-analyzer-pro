@@ -114,8 +114,9 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="py-6 text-center text-xs text-gray-400">
-        HAR Analyzer - All processing happens locally in your browser.
+      <footer className="py-6 flex flex-col items-center gap-3">
+        <img src="/mascot.png" alt="" className="w-10 h-10 opacity-60" />
+        <span className="text-xs text-gray-400">HAR Analyzer - All processing happens locally in your browser.</span>
       </footer>
     </div>
   );

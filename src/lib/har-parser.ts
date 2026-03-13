@@ -147,7 +147,7 @@ export function parseHar(raw: RawHar): {
   // or failing that, the first entry. We also consider its eTLD+1 for
   // subdomain-tolerant first-party matching.
   const docEntry = rawEntries.find(
-    (e) => inferResourceType(e) === 'document' && e.response.status >= 200 && e.response.status < 400
+    (e) => inferResourceType(e) === 'document' && (e.response?.status ?? 0) >= 200 && (e.response?.status ?? 0) < 400
   ) ?? rawEntries[0];
   const docHostname = getHostname(docEntry.request.url);
   const docRootDomain = extractRootDomain(docHostname);
@@ -157,7 +157,8 @@ export function parseHar(raw: RawHar): {
     const url = raw.request.url;
     const hostname = getHostname(url);
     const timings = normalizeTimings(raw.timings);
-    const responseSize = Math.max(raw.response.content.size ?? 0, 0);
+    const content = raw.response.content ?? { size: 0, mimeType: '' };
+    const responseSize = Math.max(content.size ?? 0, 0);
     const transferSize = raw.response.bodySize > 0 ? raw.response.bodySize : responseSize;
     const totalDuration = raw.time > 0 ? raw.time : timings.total;
     const startTimeMs = new Date(raw.startedDateTime).getTime() - earliestTime;
@@ -185,7 +186,7 @@ export function parseHar(raw: RawHar): {
     const isDuplicate = (urlCounts.get(urlKey) ?? 0) > 1;
 
     // ── Compression detection ──
-    const contentEncoding = findHeader(raw.response.headers, 'content-encoding');
+    const contentEncoding = findHeader(raw.response.headers ?? [], 'content-encoding');
     const isCompressed = !!contentEncoding;
 
     // ── Cache detection ──
@@ -212,7 +213,7 @@ export function parseHar(raw: RawHar): {
       path: getPath(url),
       protocol: getProtocol(url),
       resourceType,
-      mimeType: raw.response.content.mimeType ?? '',
+      mimeType: content.mimeType ?? '',
       statusCode: raw.response.status,
       statusText: raw.response.statusText,
       requestSize: Math.max(raw.request.bodySize, 0),
@@ -325,7 +326,7 @@ function classifyAsApi(url: string, entry: RawEntry, resourceType: ResourceType)
     if (pattern.test(url)) return true;
   }
 
-  const mime = (entry.response.content.mimeType ?? '').toLowerCase();
+  const mime = (entry.response.content?.mimeType ?? '').toLowerCase();
   const isJsonResponse = mime.includes('application/json');
   const looksLikeStaticFile = /\.(js|css|html|htm|map)(\?|#|$)/i.test(url);
 
@@ -362,7 +363,7 @@ function classifyRenderBlocking(
 ): { isRenderBlocking: boolean; reason?: string } {
   if (resourceType === 'stylesheet') {
     if (index < 20) {
-      const mediaHeader = findHeader(entry.response.headers, 'link');
+      const mediaHeader = findHeader(entry.response.headers ?? [], 'link');
       const isPrint = mediaHeader?.toLowerCase().includes('media="print"');
       if (!isPrint) {
         return {
@@ -412,8 +413,8 @@ function classifyRenderBlocking(
  */
 function detectCacheHit(entry: RawEntry): boolean {
   if (entry.response.status === 304) return true;
-  if (entry.response.bodySize === 0 && entry.response.content.size > 0) return true;
-  const xCache = findHeader(entry.response.headers, 'x-cache');
+  if (entry.response.bodySize === 0 && (entry.response.content?.size ?? 0) > 0) return true;
+  const xCache = findHeader(entry.response.headers ?? [], 'x-cache');
   if (xCache && /hit/i.test(xCache)) return true;
   return false;
 }
@@ -448,7 +449,7 @@ function inferResourceType(entry: RawEntry): ResourceType {
   }
 
   // Layer 2: MIME type
-  const mime = (entry.response.content.mimeType ?? '').toLowerCase();
+  const mime = (entry.response.content?.mimeType ?? '').toLowerCase();
   if (mime.includes('text/html') || mime.includes('application/xhtml')) return 'document';
   if (mime.includes('text/css')) return 'stylesheet';
   if (mime.includes('javascript') || mime.includes('ecmascript')) return 'script';
@@ -474,7 +475,8 @@ function inferResourceType(entry: RawEntry): ResourceType {
 // Timing normalization
 // ─────────────────────────────────────────────────────────────────
 
-function normalizeTimings(t: RawEntry['timings']): NormalizedTimings {
+function normalizeTimings(t: RawEntry['timings'] | undefined): NormalizedTimings {
+  if (!t) return { blocked: 0, dns: 0, connect: 0, ssl: 0, send: 0, wait: 0, receive: 0, total: 0 };
   const c = (v: number) => (v > 0 ? v : 0);
   const blocked = c(t.blocked);
   const dns = c(t.dns);
